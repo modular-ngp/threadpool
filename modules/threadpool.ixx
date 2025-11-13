@@ -1,4 +1,4 @@
-export module threadpool;
+module;
 
 #include <atomic>
 #include <condition_variable>
@@ -10,6 +10,8 @@ export module threadpool;
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+export module threadpool;
 
 export class ThreadPool {
 public:

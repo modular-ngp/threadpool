@@ -1,19 +1,21 @@
 import threadpool;
 
-#include <cassert>
 #include <atomic>
+#include <cassert>
 #include <chrono>
+#include <future>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
 #include <vector>
-#include <stdexcept>
+
 
 using namespace std::chrono_literals;
 
 static void test_basic_single_task() {
     ThreadPool pool(2);
 
-    auto fut = pool.enqueue([] { return 42; });
+    auto fut  = pool.enqueue([] { return 42; });
     int value = fut.get();
     assert(value == 42);
 
@@ -29,9 +31,7 @@ static void test_multiple_tasks_and_wait_idle() {
     futures.reserve(N);
 
     for (int i = 0; i < N; ++i) {
-        futures.push_back(pool.enqueue([&counter] {
-            counter.fetch_add(1, std::memory_order_relaxed);
-        }));
+        futures.push_back(pool.enqueue([&counter] { counter.fetch_add(1, std::memory_order_relaxed); }));
     }
 
     for (auto& f : futures) {
@@ -46,13 +46,11 @@ static void test_multiple_tasks_and_wait_idle() {
 static void test_exception_propagation() {
     ThreadPool pool(2);
 
-    auto fut = pool.enqueue([]() -> int {
-        throw std::runtime_error("test error");
-    });
+    auto fut = pool.enqueue([]() -> int { throw std::runtime_error("test error"); });
 
     bool caught = false;
     try {
-        (void)fut.get();
+        (void) fut.get();
     } catch (const std::runtime_error& e) {
         caught = true;
         assert(std::string(e.what()) == "test error");
@@ -80,7 +78,6 @@ static void test_destruction_waits_for_tasks() {
             std::this_thread::sleep_for(100ms);
             finished.store(true, std::memory_order_release);
         });
-        // 离开作用域时 ~ThreadPool() 应该等任务结束
     }
 
     assert(started.load(std::memory_order_acquire));
@@ -88,7 +85,7 @@ static void test_destruction_waits_for_tasks() {
 }
 
 static void test_parallel_behavior_smoke() {
-    constexpr int N = 8;
+    constexpr int N           = 8;
     constexpr auto sleep_time = 100ms;
 
     auto serial_start = std::chrono::steady_clock::now();
@@ -96,7 +93,7 @@ static void test_parallel_behavior_smoke() {
         std::this_thread::sleep_for(sleep_time);
     }
     auto serial_end = std::chrono::steady_clock::now();
-    auto serial_ms = std::chrono::duration_cast<std::chrono::milliseconds>(serial_end - serial_start).count();
+    auto serial_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(serial_end - serial_start).count();
 
     ThreadPool pool(4);
 
@@ -104,21 +101,18 @@ static void test_parallel_behavior_smoke() {
     std::vector<std::future<void>> futures;
     futures.reserve(N);
     for (int i = 0; i < N; ++i) {
-        futures.push_back(pool.enqueue([&] {
-            std::this_thread::sleep_for(sleep_time);
-        }));
+        futures.push_back(pool.enqueue([&] { std::this_thread::sleep_for(sleep_time); }));
     }
     for (auto& f : futures) {
         f.get();
     }
     pool.wait_idle();
     auto parallel_end = std::chrono::steady_clock::now();
-    auto parallel_ms = std::chrono::duration_cast<std::chrono::milliseconds>(parallel_end - parallel_start).count();
+    auto parallel_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(parallel_end - parallel_start).count();
 
-    std::cout << "[timing] serial   = " << serial_ms   << " ms\n";
+    std::cout << "[timing] serial   = " << serial_ms << " ms\n";
     std::cout << "[timing] parallel = " << parallel_ms << " ms\n";
 
-    // 不做严格断言，只要求比严格串行明显快一点（留出环境噪声）
     assert(parallel_ms < serial_ms);
 }
 
