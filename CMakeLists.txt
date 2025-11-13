@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 4.00)
 project(threadpool VERSION 1.0.0 LANGUAGES CXX)
 
+# ---------------------------------------------------------
+# General settings
+# ---------------------------------------------------------
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -8,8 +11,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API ON)
 
+# ---------------------------------------------------------
+# Library: threadpool (C++ module)
+# ---------------------------------------------------------
 add_library(threadpool)
 add_library(threadpool::threadpool ALIAS threadpool)
+
 target_sources(threadpool
         PUBLIC
         FILE_SET cxx_modules TYPE CXX_MODULES FILES
@@ -19,7 +26,17 @@ target_sources(threadpool
 find_package(Threads REQUIRED)
 target_link_libraries(threadpool PRIVATE Threads::Threads)
 
-include(CTest)
-add_executable(threadpool_tests test/test_threadpool.cpp)
-target_link_libraries(threadpool_tests PRIVATE threadpool)
-add_test(NAME ThreadPoolTests COMMAND threadpool_tests)
+# ---------------------------------------------------------
+# Optionally build tests (default OFF)
+# ---------------------------------------------------------
+option(BUILD_THREADPOOL_TESTS "Build threadpool unit tests" OFF)
+
+if (BUILD_THREADPOOL_TESTS)
+    include(CTest)
+    enable_testing()
+
+    add_executable(threadpool_tests test/test_threadpool.cpp)
+    target_link_libraries(threadpool_tests PRIVATE threadpool)
+
+    add_test(NAME ThreadPoolTests COMMAND threadpool_tests)
+endif ()
