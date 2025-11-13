@@ -18,3 +18,8 @@ target_sources(threadpool
 
 find_package(Threads REQUIRED)
 target_link_libraries(threadpool PRIVATE Threads::Threads)
+
+include(CTest)
+add_executable(threadpool_tests test/test_threadpool.cpp)
+target_link_libraries(threadpool_tests PRIVATE threadpool)
+add_test(NAME ThreadPoolTests COMMAND threadpool_tests)
